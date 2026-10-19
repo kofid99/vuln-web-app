@@ -20,7 +20,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **OWASP:** A01 — Broken Access Control  
 **Endpoint:** /api/admin  
 **Description:** The /api/admin endpoint returns sensitive user data including password hashes, emails, roles, and server information with no authentication required. Any unauthenticated user can access this endpoint directly.  
-**Proof:** `curl https://vuln-web-app-rust.vercel.app/api/admin`  
+**Proof:** curl_2.png — unauthenticated curl to /api/admin returns all user data
 **Remediation:** Implement server-side session verification on all admin endpoints. Return 401 Unauthorized for unauthenticated requests.
 
 ---
@@ -30,7 +30,8 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **OWASP:** A02 — Cryptographic Failures  
 **Endpoint:** /api/admin  
 **Description:** The /api/admin endpoint returns bcrypt password hashes for all users. An attacker can retrieve these hashes and attempt offline cracking using tools like Hashcat or John the Ripper.  
-**Proof:** Response includes `"password_hash":"$2b$10$fakehashedpassword123"`  
+**Proof:** curl_2.png — response includes bcrypt password hashes for all users
+`"password_hash":"$2b$10$fakehashedpassword123"`  
 **Remediation:** Never return password hashes in API responses regardless of authentication status.
 
 ---
@@ -40,7 +41,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **OWASP:** A02 — Cryptographic Failures  
 **Endpoint:** /api/users  
 **Description:** The /api/users endpoint returns all user emails, roles, and last login timestamps with no authentication required.  
-**Proof:** `curl https://vuln-web-app-rust.vercel.app/api/users`  
+**Proof:** curl_2.png — unauthenticated curl to /api/users returns all emails, roles, last login
 **Remediation:** Require authentication on all endpoints returning user data.
 
 ---
@@ -69,7 +70,8 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **Severity:** High  
 **OWASP:** A07 — Identification and Authentication Failures  
 **Endpoint:** /api/login  
-**Description:** The login endpoint accepts unlimited requests with no throttling or lockout mechanism, enabling brute force attacks.  
+**Description:** The login endpoint accepts unlimited requests with no throttling or lockout mechanism, enabling brute force attacks. 
+**Proof:** curl_1.png — endpoint accepts unlimited requests with no 429 response 
 **Remediation:** Implement rate limiting (e.g. 5 attempts per minute per IP) and account lockout after repeated failures.
 
 ---
@@ -77,7 +79,8 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 ### Finding 7 — Missing HTTP Security Headers
 **Severity:** High  
 **OWASP:** A05 — Security Misconfiguration  
-**Description:** The application is missing critical security headers: Content-Security-Policy, X-Frame-Options, Permissions-Policy, and X-Content-Type-Options.  
+**Description:** The application is missing critical security headers: Content-Security-Policy, X-Frame-Options, Permissions-Policy, and X-Content-Type-Options.
+**Proof:** nuclei_results.png — 10 missing header findings, Zap_1.png — ZAP confirms CSP, X-Frame-Options, X-Content-Type-Options missing  
 **Impact:** Missing CSP enables XSS attacks. Missing X-Frame-Options enables clickjacking.  
 **Remediation:** Add all missing security headers in next.config.mjs.
 
@@ -87,6 +90,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **Severity:** High  
 **OWASP:** A05 — Security Misconfiguration  
 **Description:** Access-Control-Allow-Origin is set to wildcard (*), allowing any origin to make cross-origin requests to the API.  
+**Proof:** Zap_1.png — ZAP flagged Cross-Domain Misconfiguration (Systemic)
 **Remediation:** Restrict CORS to trusted origins only.
 
 ---
@@ -95,6 +99,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **Severity:** Low  
 **OWASP:** A05 — Security Misconfiguration  
 **Description:** HTTP response headers expose server technology including `server: Vercel` and underlying Golang net/http server, revealed via Nmap scan.  
+**Proof:** curl_2.png — Nuclei scan shows server: Vercel header and SSL certificate details
 **Remediation:** Remove or obscure server identification headers.
 
 ---
@@ -103,6 +108,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **Severity:** Critical  
 **OWASP:** A01 — Broken Access Control  
 **Description:** The /dashboard route performs no server-side session verification. Any user can navigate directly to the dashboard URL without logging in.  
+**Proof:** Direct browser navigation to /dashboard without login — page loads with full admin data
 **Remediation:** Implement server-side session checks on all protected routes using middleware.
 
 ---
@@ -110,7 +116,8 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 ### Finding 11 — Sensitive Credentials in Environment Configuration
 **Severity:** High  
 **OWASP:** A02 — Cryptographic Failures  
-**Description:** OAuth client ID, client secret, Supabase URL, anon key, and admin credentials are stored in .env.local. If this file were accidentally committed to version control it would expose all credentials.  
+**Description:** OAuth client ID, client secret, Supabase URL, anon key, and admin credentials are stored in .env.local. If this file were accidentally committed to version control it would expose all credentials. 
+**Proof:** Browser Sources tab screenshot — civic-oauth-client-id visible in JavaScript bundle 
 **Remediation:** Use a secrets manager (AWS Secrets Manager, HashiCorp Vault) and ensure .env files are always in .gitignore.
 
 ---
@@ -119,6 +126,7 @@ A security assessment was conducted against a deliberately vulnerable Next.js we
 **Severity:** Low  
 **OWASP:** A05 — Security Misconfiguration  
 **Description:** Nmap scan revealed open ports 80 and 443, server: Vercel header, and underlying Golang net/http server technology.  
+**Proof:** Nmap scan output — ports 80/443 open, server: Vercel, Golang net/http exposed
 **Remediation:** Configure server headers to minimize technology disclosure.
 
 ---
